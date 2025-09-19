@@ -1,0 +1,54 @@
+# =========================
+# Dependencies
+# =========================
+**/node_modules/
+
+# =========================
+# Environment
+# =========================
+**/.env
+**/.env.*
+
+# =========================
+# Logs
+# =========================
+**/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Coverage & test outputs
+# =========================
+**/coverage/
+.nyc_output/
+
+# =========================
+# Build artifacts
+# =========================
+**/build/
+**/dist/
+**/tmp/
+.next/
+.turbo/
+
+# =========================
+# OS / Editor files
+# =========================
+.DS_Store
+.vscode/
+.idea/
+
+# =========================
+# Misc
+# =========================
+jest-html-reporters-*/
+.vercel/
+
+# =========================
+# Project artifacts
+# =========================
+Sweet-backend/postman/
+Sweet-backend/src/seed/sampleData.js
