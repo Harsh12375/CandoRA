@@ -1,54 +1,55 @@
-# =========================
-# Dependencies
-# =========================
-**/node_modules/
+# Unified .gitignore for Sweet-frontend and Sweet-backend
 
-# =========================
-# Environment
-# =========================
-**/.env
-**/.env.*
-
-# =========================
-# Logs
-# =========================
-**/logs/
+# Node
+node_modules/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# =========================
-# Coverage & test outputs
-# =========================
-**/coverage/
-.nyc_output/
+# Environment files (keep examples)
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env*.example
 
-# =========================
-# Build artifacts
-# =========================
-**/build/
-**/dist/
-**/tmp/
+# Build outputs
 .next/
-.turbo/
-
-# =========================
-# OS / Editor files
-# =========================
-.DS_Store
-.vscode/
-.idea/
-
-# =========================
-# Misc
-# =========================
-jest-html-reporters-*/
+.next/cache/
+dist/
+build/
+out/
+coverage/
 .vercel/
+.vite/
 
-# =========================
-# Project artifacts
-# =========================
-Sweet-backend/postman/
-Sweet-backend/src/seed/sampleData.js
+# TypeScript
+*.tsbuildinfo
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Tests
+/junit.xml
+/coverage/
+**/coverage/
+
+# Temporary files
+.tmp/
+.temp/
+tmp/
+
+
+# package-lock.json
+# pnpm-lock.yaml
+# yarn.lock
+
+# Backups
+*.orig
+*.rej
