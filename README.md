@@ -20,7 +20,8 @@ Place screenshots in `docs/screenshots/` and ensure they are committed. Example 
 
 - Auth page
   
-<img width="1919" height="908" alt="image" src="https://github.com/user-attachments/assets/5fb7e000-3fb4-4418-9685-5603c11ee555" />
+<img width="1917" height="913" alt="image" src="https://github.com/user-attachments/assets/858ecfee-1217-4e35-92aa-0a6d53743098" />
+
 <img width="1919" height="906" alt="image" src="https://github.com/user-attachments/assets/e598a273-9d56-424e-be51-c6ceca1345c9" />
 
 
