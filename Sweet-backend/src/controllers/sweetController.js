@@ -3,11 +3,11 @@ const Sweet = require('../models/Sweet');
 // POST /api/sweets
 async function createSweet(req, res, next) {
   try {
-    const { name, category, price, quantity } = req.body;
+    const { name, category, price, quantity, imageUrl } = req.body;
     const exists = await Sweet.findOne({ name });
     if (exists) return res.status(409).json({ message: 'Sweet with this name already exists' });
 
-    const sweet = await Sweet.create({ name, category, price, quantity });
+    const sweet = await Sweet.create({ name, category, price, quantity, imageUrl });
     res.status(201).json(sweet);
   } catch (err) {
     next(err);
