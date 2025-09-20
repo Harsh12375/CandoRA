@@ -5,6 +5,9 @@ A full-stack sweet shop application built with a modern Next.js frontend and a p
 - Frontend: `Sweet-frontend/` (Next.js 14 App Router, React 18, Tailwind CSS v4, shadcn/ui, Radix)
 - Backend: `Sweet-backend/` (Node.js, Express, MongoDB/Mongoose, JWT auth, Validation, Jest/Supertest)
 
+Deployement link- https://cando-ra-frontend.vercel.app/
+(admin email - admin@candora.com      admin password - 123456789   |    user - use any email id and password)
+
 ## Screenshots
 Place screenshots in `docs/screenshots/` and ensure they are committed. Example references:
 
