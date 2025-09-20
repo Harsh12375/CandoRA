@@ -54,7 +54,6 @@ Place screenshots in `docs/screenshots/` and ensure they are committed. Example 
   - [Backend Setup (Sweet-backend/)](#backend-setup-sweet-backend)
   - [Frontend Setup (Sweet-frontend/)](#frontend-setup-sweet-frontend)
 - [API Overview](#api-overview)
-- [Screenshots](#screenshots)
 - [Troubleshooting](#troubleshooting)
 - [My AI Usage](#my-ai-usage)
 
