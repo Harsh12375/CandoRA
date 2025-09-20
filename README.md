@@ -26,8 +26,13 @@ A full-stack sweet shop application built with a modern Next.js frontend and a p
 CandoRA is a sweet shop application showcasing a polished marketing site and an admin interface. The backend provides a secure REST API with JWT-based authentication, validation, and testing. The frontend delivers a modern UI/UX with animations and responsive design.
 
 Current status:
-- The backend is complete and ready for use.
-- The frontend contains both production-ready UI and some mock-driven pages. You can optionally wire authentication and data fetching to the backend using the guidance below.
+- Backend is complete and ready.
+- Frontend is connected to the backend for:
+  - User auth (login/register)
+  - Showcase listing and purchase flow
+  - Admin Dashboard (create, restock, delete sweets)
+  - Admin Inventory (load & update stock)
+  Some secondary widgets remain mock (e.g., Recent Orders/Top Products lists).
 
 ---
 
@@ -138,68 +143,17 @@ CandoRA/
 4. Open http://localhost:3000
 
 Notes:
-- Some frontend pages currently use mock data (e.g., inventory). The `/auth` page can be wired to backend auth; see below.
+- Frontend is already wired to the backend through a typed API client and guarded admin routes.
+- Key integration files and paths:
+  - `Sweet-frontend/lib/api.ts` — central API client (auth, sweets, inventory)
+  - `Sweet-frontend/components/auth-page.tsx` — login/register using backend
+  - `Sweet-frontend/components/sweet-showcase.tsx` — loads sweets, purchase flow
+  - `Sweet-frontend/app/admin/page.tsx` — admin login (requires admin role)
+  - `Sweet-frontend/components/admin-layout.tsx` — admin guard + logout
+  - `Sweet-frontend/app/admin/dashboard/page.tsx` — create/restock/delete sweets
+  - `Sweet-frontend/app/admin/inventory/page.tsx` — list and update stock
 
-#### Optional: Wire Frontend Auth to Backend
-If you want the `/auth` page to use real backend login/register:
-1. Create `Sweet-frontend/lib/api.ts`:
-   ```ts
-   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-
-   function getBaseUrl() {
-     if (!BASE_URL) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
-     return BASE_URL.replace(/\/+$/, "");
-   }
-
-   class ApiError extends Error {
-     status?: number;
-     constructor(message: string, status?: number) {
-       super(message);
-       this.name = "ApiError";
-       this.status = status;
-     }
-   }
-
-   async function request<T>(path: string, init?: RequestInit): Promise<T> {
-     const url = `${getBaseUrl()}${path}`;
-     const res = await fetch(url, {
-       method: "GET",
-       headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-       credentials: "omit",
-       ...init,
-     });
-     if (!res.ok) {
-       let message = `Request failed with status ${res.status}`;
-       try {
-         const data = await res.json();
-         if (data?.message) message = data.message;
-         else if (Array.isArray(data?.errors) && data.errors.length) message = data.errors[0].msg || message;
-       } catch {}
-       throw new ApiError(message, res.status);
-     }
-     if (res.status === 204) return undefined as unknown as T;
-     return (await res.json()) as T;
-   }
-
-   export const auth = {
-     login(payload: { email: string; password: string }) {
-       return request<{ token: string; user: unknown }>("/api/auth/login", {
-         method: "POST",
-         body: JSON.stringify(payload),
-       });
-     },
-     register(payload: { name: string; email: string; password: string; role?: "user" | "admin" }) {
-       return request<{ token: string; user: unknown }>("/api/auth/register", {
-         method: "POST",
-         body: JSON.stringify({ ...payload, role: payload.role ?? "user" }),
-       });
-     },
-   };
-
-   export type { ApiError };
-   ```
-2. In `Sweet-frontend/components/auth-page.tsx`, call `auth.login` or `auth.register`, store `token`/`user` in `localStorage`, and redirect on success.
-3. Restart the frontend dev server after editing env or client code.
+No extra wiring needed beyond setting the env vars and running the dev servers.
 
 ---
 
@@ -223,6 +177,29 @@ All protected endpoints require `Authorization: Bearer <JWT>`.
 
 ---
 
+## Frontend Features
+- Auth
+  - `components/auth-page.tsx` uses backend `POST /api/auth/register` and `POST /api/auth/login`.
+  - On success, stores `token` and `user` in `localStorage` and redirects to `/showcase`.
+
+- Showcase
+  - `components/sweet-showcase.tsx` loads sweets from `GET /api/sweets`.
+  - Cart purchases call `POST /api/sweets/:id/purchase` for each cart item and refresh the list.
+  - Falls back to demo data if not authenticated, so the UI remains usable.
+
+- Admin Dashboard
+  - `app/admin/dashboard/page.tsx` (guarded by `components/admin-layout.tsx`).
+  - Create Sweet → `POST /api/sweets`.
+  - Restock → `POST /api/sweets/:id/restock`.
+  - Delete → `DELETE /api/sweets/:id`.
+  - Summary cards computed from live sweets data.
+
+- Admin Inventory
+  - `app/admin/inventory/page.tsx` (guarded).
+  - Loads sweets via `GET /api/sweets` and maps to inventory rows.
+  - Update stock via `PUT /api/sweets/:id` (quantity).
+  - Client-side filtering, sorting, pagination.
+
 ## Screenshots
 Place screenshots in `docs/screenshots/` and ensure they are committed. Example references:
 
@@ -241,6 +218,10 @@ Place screenshots in `docs/screenshots/` and ensure they are committed. Example 
 - Admin Inventory
   
   ![Admin Inventory](docs/screenshots/admin-inventory.png)
+
+- Admin Dashboard
+  
+  ![Admin Dashboard](docs/screenshots/admin-dashboard.png)
 
 > If you don’t have screenshots yet, take them locally (e.g., `Alt+PrtScn` on Windows) and save them under `docs/screenshots/` with the above names.
 

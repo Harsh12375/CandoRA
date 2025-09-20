@@ -7,24 +7,44 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Eye, EyeOff } from "lucide-react"
+import { api } from "@/lib/api"
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Simulate authentication process
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Redirect to showcase page after successful auth
-    router.push("/showcase")
+    try {
+      if (isLogin) {
+        const res = await api.auth.login({ email, password })
+        localStorage.setItem("token", res.token)
+        localStorage.setItem("user", JSON.stringify(res.user))
+      } else {
+        if (!name.trim()) {
+          setError("Name is required for sign up")
+          return
+        }
+        const res = await api.auth.register({ name: name.trim(), email, password, role: "user" })
+        localStorage.setItem("token", res.token)
+        localStorage.setItem("user", JSON.stringify(res.user))
+      }
+      router.push("/showcase")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Authentication failed"
+      setError(message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -42,6 +62,18 @@ export default function AuthPage() {
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {!isLogin && (
+              <div>
+                <Input
+                  type="text"
+                  placeholder="Full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-14 px-4 text-base border-gray-200 rounded-xl focus:border-rose-400 focus:ring-rose-400"
+                  required
+                />
+              </div>
+            )}
             <div>
               <Input
                 type="email"
@@ -76,6 +108,12 @@ export default function AuthPage() {
                 <button type="button" className="text-sm text-gray-500 hover:text-rose-600 font-sans">
                   Recovery Password
                 </button>
+              </div>
+            )}
+
+            {error && (
+              <div className="text-sm text-red-600" role="alert">
+                {error}
               </div>
             )}
 

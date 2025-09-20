@@ -56,10 +56,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     } else {
       document.documentElement.classList.remove("dark")
     }
+
+    // Basic admin auth guard
+    try {
+      const token = localStorage.getItem("token")
+      const userRaw = localStorage.getItem("user")
+      const user = userRaw ? JSON.parse(userRaw) : null
+      if (!token || !user || user.role !== "admin") {
+        router.push("/admin")
+      }
+    } catch {
+      router.push("/admin")
+    }
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem("adminToken")
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
     router.push("/admin")
   }
 

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { api } from "@/lib/api"
 import {
   Search,
   Download,
@@ -27,10 +28,32 @@ import {
   Minus,
 } from "lucide-react"
 
+// Types
+type StockStatus = "In Stock" | "Low Stock" | "Out of Stock"
+type Movement = "up" | "down"
+type SortField = "name" | "currentStock" | "unitPrice" | "totalValue"
+
+interface InventoryItem {
+  id: string
+  name: string
+  sku: string
+  category: string
+  currentStock: number
+  minStock: number
+  maxStock: number
+  unitPrice: number
+  totalValue: number
+  supplier: string
+  lastRestocked: string
+  status: StockStatus
+  movement: Movement
+  weeklyChange: number
+}
+
 // Mock inventory data
-const inventoryData = [
+const inventoryData: InventoryItem[] = [
   {
-    id: 1,
+    id: "1",
     name: "Gulab Jamun",
     sku: "GJ001",
     category: "Indian",
@@ -46,7 +69,7 @@ const inventoryData = [
     weeklyChange: 12,
   },
   {
-    id: 2,
+    id: "2",
     name: "Chocolate Truffle",
     sku: "CT002",
     category: "Western",
@@ -62,7 +85,7 @@ const inventoryData = [
     weeklyChange: -100,
   },
   {
-    id: 3,
+    id: "3",
     name: "Rasgulla",
     sku: "RG003",
     category: "Indian",
@@ -78,7 +101,7 @@ const inventoryData = [
     weeklyChange: 8,
   },
   {
-    id: 4,
+    id: "4",
     name: "Jalebi",
     sku: "JL004",
     category: "Indian",
@@ -94,7 +117,7 @@ const inventoryData = [
     weeklyChange: -15,
   },
   {
-    id: 5,
+    id: "5",
     name: "Laddu",
     sku: "LD005",
     category: "Indian",
@@ -110,7 +133,7 @@ const inventoryData = [
     weeklyChange: 5,
   },
   {
-    id: 6,
+    id: "6",
     name: "Barfi",
     sku: "BF006",
     category: "Indian",
@@ -130,27 +153,66 @@ const inventoryData = [
 export default function InventoryPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
-  const [inventory, setInventory] = useState(inventoryData)
-  const [filteredInventory, setFilteredInventory] = useState(inventoryData)
+  const demoInventory: InventoryItem[] = inventoryData
+  const [inventory, setInventory] = useState<InventoryItem[]>(demoInventory)
+  const [filteredInventory, setFilteredInventory] = useState<InventoryItem[]>(demoInventory)
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [sortField, setSortField] = useState("name")
-  const [sortDirection, setSortDirection] = useState("asc")
-  const [selectedItems, setSelectedItems] = useState([])
+  const [sortField, setSortField] = useState<SortField>("name")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [isStockUpdateOpen, setIsStockUpdateOpen] = useState(false)
-  const [stockUpdateItem, setStockUpdateItem] = useState(null)
+  const [stockUpdateItem, setStockUpdateItem] = useState<InventoryItem | null>(null)
   const [stockUpdateValue, setStockUpdateValue] = useState("")
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken")
-    if (!token) {
+    const token = localStorage.getItem("token")
+    const userRaw = localStorage.getItem("user")
+    const user = userRaw ? JSON.parse(userRaw) : null
+    if (!token || !user || user.role !== "admin") {
       router.push("/admin")
       return
     }
-    setIsLoading(false)
+
+    async function load() {
+      try {
+        const sweets = await api.sweets.list()
+        const mapped: InventoryItem[] = sweets.map((s: any) => {
+          const qty = s.quantity ?? 0
+          const price = s.price ?? 0
+          const status = qty === 0 ? "Out of Stock" : qty <= 20 ? "Low Stock" : "In Stock"
+          return {
+            id: s._id as string,
+            name: s.name as string,
+            sku: (s.name as string)?.toUpperCase().slice(0, 2) + String(s._id).slice(-4),
+            category: s.category as string,
+            currentStock: qty as number,
+            minStock: 20,
+            maxStock: 100,
+            unitPrice: price as number,
+            totalValue: price * qty,
+            supplier: "—",
+            lastRestocked: (s.updatedAt || s.createdAt || new Date()).toString().split("T")[0],
+            status,
+            movement: "up",
+            weeklyChange: 0,
+          } as InventoryItem
+        })
+        setInventory(mapped)
+        setFilteredInventory(mapped)
+      } catch (e) {
+        // Fallback to mock data if API fails
+        setInventory(demoInventory)
+        setFilteredInventory(demoInventory)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    load()
   }, [router])
 
   useEffect(() => {
@@ -173,28 +235,38 @@ export default function InventoryPage() {
       filtered = filtered.filter((item) => item.status === statusFilter)
     }
 
-    // Sort
-    filtered.sort((a, b) => {
-      let aValue = a[sortField]
-      let bValue = b[sortField]
+    // Sort (avoid mutating state arrays)
+    const sorted = [...filtered].sort((a, b) => {
+      let aValue: any = (a as any)[sortField]
+      let bValue: any = (b as any)[sortField]
 
-      if (typeof aValue === "string") {
-        aValue = aValue.toLowerCase()
-        bValue = bValue.toLowerCase()
+      // Handle undefined/null safely
+      const aU = aValue === undefined || aValue === null
+      const bU = bValue === undefined || bValue === null
+      if (aU && bU) return 0
+      if (aU) return sortDirection === "asc" ? 1 : -1
+      if (bU) return sortDirection === "asc" ? -1 : 1
+
+      if (typeof aValue === "string" || typeof bValue === "string") {
+        aValue = String(aValue).toLowerCase()
+        bValue = String(bValue).toLowerCase()
+      } else {
+        aValue = Number(aValue)
+        bValue = Number(bValue)
       }
 
       if (sortDirection === "asc") {
-        return aValue > bValue ? 1 : -1
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
       } else {
-        return aValue < bValue ? 1 : -1
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
       }
     })
 
-    setFilteredInventory(filtered)
+    setFilteredInventory(sorted)
     setCurrentPage(1)
   }, [inventory, searchTerm, categoryFilter, statusFilter, sortField, sortDirection])
 
-  const handleSort = (field) => {
+  const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
     } else {
@@ -203,7 +275,7 @@ export default function InventoryPage() {
     }
   }
 
-  const handleSelectAll = (checked) => {
+  const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedItems(paginatedItems.map((item) => item.id))
     } else {
@@ -211,7 +283,7 @@ export default function InventoryPage() {
     }
   }
 
-  const handleSelectItem = (itemId, checked) => {
+  const handleSelectItem = (itemId: string, checked: boolean) => {
     if (checked) {
       setSelectedItems([...selectedItems, itemId])
     } else {
@@ -219,35 +291,42 @@ export default function InventoryPage() {
     }
   }
 
-  const handleStockUpdate = (item, type) => {
+  const handleStockUpdate = (item: InventoryItem, type: "update" | "add" | "remove") => {
     setStockUpdateItem(item)
     setStockUpdateValue("")
     setIsStockUpdateOpen(true)
   }
 
-  const handleStockSubmit = () => {
-    if (stockUpdateItem && stockUpdateValue) {
+  const handleStockSubmit = async () => {
+    if (stockUpdateItem && stockUpdateValue !== "") {
       const newStock = Number.parseInt(stockUpdateValue)
-      setInventory(
-        inventory.map((item) =>
-          item.id === stockUpdateItem.id
-            ? {
-                ...item,
-                currentStock: newStock,
-                totalValue: newStock * item.unitPrice,
-                status: newStock === 0 ? "Out of Stock" : newStock <= item.minStock ? "Low Stock" : "In Stock",
-                lastRestocked: new Date().toISOString().split("T")[0],
-              }
-            : item,
-        ),
-      )
-      setIsStockUpdateOpen(false)
-      setStockUpdateItem(null)
-      setStockUpdateValue("")
+      try {
+        if (typeof stockUpdateItem.id === "string") {
+          await api.sweets.update(stockUpdateItem.id, { quantity: newStock })
+        }
+        setInventory(
+          inventory.map((item) =>
+            item.id === stockUpdateItem.id
+              ? {
+                  ...item,
+                  currentStock: newStock,
+                  totalValue: newStock * item.unitPrice,
+                  status: newStock === 0 ? "Out of Stock" : newStock <= item.minStock ? "Low Stock" : "In Stock",
+                  lastRestocked: new Date().toISOString().split("T")[0],
+                }
+              : item,
+          ),
+        )
+        setIsStockUpdateOpen(false)
+        setStockUpdateItem(null)
+        setStockUpdateValue("")
+      } catch (e: any) {
+        if (typeof window !== "undefined") alert(e?.message || "Failed to update stock")
+      }
     }
   }
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: StockStatus) => {
     switch (status) {
       case "In Stock":
         return "bg-green-100 text-green-800"
@@ -436,7 +515,7 @@ export default function InventoryPage() {
                     <TableHead className="w-12">
                       <Checkbox
                         checked={selectedItems.length === paginatedItems.length && paginatedItems.length > 0}
-                        onCheckedChange={handleSelectAll}
+                        onCheckedChange={(checked) => handleSelectAll(checked === true)}
                       />
                     </TableHead>
                     <TableHead>
@@ -485,7 +564,7 @@ export default function InventoryPage() {
                       <TableCell>
                         <Checkbox
                           checked={selectedItems.includes(item.id)}
-                          onCheckedChange={(checked) => handleSelectItem(item.id, checked)}
+                          onCheckedChange={(checked) => handleSelectItem(item.id, checked === true)}
                         />
                       </TableCell>
                       <TableCell>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import { api } from "@/lib/api"
 
 const sweetsData = [
   {
@@ -102,11 +103,21 @@ const sweetsData = [
 ]
 
 interface CartItem {
-  id: number
+  id: string
   name: string
   price: number
   quantity: number
   imageUrl: string
+}
+
+interface SweetUI {
+  id: string
+  name: string
+  category: string
+  price: number
+  stock: number
+  imageUrl: string
+  bgColor?: string
 }
 
 export default function SweetShowcase() {
@@ -117,7 +128,12 @@ export default function SweetShowcase() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [priceRange, setPriceRange] = useState([0, 50])
   const [showFilters, setShowFilters] = useState(false)
-  const [filteredSweets, setFilteredSweets] = useState(sweetsData)
+  const demoSweets: SweetUI[] = (sweetsData as any[]).map((s) => ({
+    ...s,
+    id: String(s.id),
+  }))
+  const [allSweets, setAllSweets] = useState<SweetUI[]>(demoSweets)
+  const [filteredSweets, setFilteredSweets] = useState<SweetUI[]>(demoSweets)
 
   const lastScrollTime = useRef(0)
   const scrollThrottle = 800 // milliseconds
@@ -125,7 +141,7 @@ export default function SweetShowcase() {
   const currentSweet = filteredSweets.length > 0 ? filteredSweets[currentIndex] || filteredSweets[0] : null
 
   useEffect(() => {
-    const filtered = sweetsData.filter((sweet) => {
+    const filtered = allSweets.filter((sweet) => {
       const matchesSearch =
         sweet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         sweet.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -139,7 +155,32 @@ export default function SweetShowcase() {
     if (filtered.length > 0) {
       setCurrentIndex(0)
     }
-  }, [searchQuery, selectedCategory, priceRange])
+  }, [searchQuery, selectedCategory, priceRange, allSweets])
+
+  // Fetch sweets from backend on mount (requires user to be logged in)
+  useEffect(() => {
+    async function load() {
+      try {
+        const items = await api.sweets.list()
+        const mapped: SweetUI[] = items.map((s: any) => ({
+          id: s._id,
+          name: s.name,
+          category: s.category,
+          price: s.price,
+          stock: s.quantity,
+          imageUrl: s.imageUrl || "/placeholder.svg",
+          bgColor: "#f7e1d3",
+        }))
+        setAllSweets(mapped)
+        setFilteredSweets(mapped)
+        setCurrentIndex(0)
+      } catch (e) {
+        // If unauthenticated or error, keep initial demo data
+        console.warn("Failed to load sweets from API, using demo data")
+      }
+    }
+    load()
+  }, [])
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
@@ -175,18 +216,19 @@ export default function SweetShowcase() {
     }
   }, [currentIndex, filteredSweets.length])
 
-  const addToCart = (sweet: (typeof sweetsData)[0]) => {
+  const addToCart = (sweet: SweetUI) => {
     if (sweet.stock === 0) return
 
     setCartItems((prev) => {
-      const existingItem = prev.find((item) => item.id === sweet.id)
+      const idStr = String(sweet.id)
+      const existingItem = prev.find((item) => item.id === idStr)
       if (existingItem) {
-        return prev.map((item) => (item.id === sweet.id ? { ...item, quantity: item.quantity + 1 } : item))
+        return prev.map((item) => (item.id === idStr ? { ...item, quantity: item.quantity + 1 } : item))
       } else {
         return [
           ...prev,
           {
-            id: sweet.id,
+            id: idStr,
             name: sweet.name,
             price: sweet.price,
             quantity: 1,
@@ -197,7 +239,7 @@ export default function SweetShowcase() {
     })
   }
 
-  const updateCartQuantity = (id: number, newQuantity: number) => {
+  const updateCartQuantity = (id: string, newQuantity: number) => {
     if (newQuantity === 0) {
       setCartItems((prev) => prev.filter((item) => item.id !== id))
     } else {
@@ -229,7 +271,34 @@ export default function SweetShowcase() {
     }
   }
 
-  const categories = ["all", ...Array.from(new Set(sweetsData.map((sweet) => sweet.category)))]
+  const categories = ["all", ...Array.from(new Set(allSweets.map((sweet) => sweet.category)))]
+
+  const purchaseAll = async () => {
+    if (cartItems.length === 0) return
+    try {
+      for (const item of cartItems) {
+        await api.inventory.purchase(item.id, item.quantity)
+      }
+      setCartItems([])
+      // Refresh list to reflect new stock
+      const items = await api.sweets.list()
+      const mapped: SweetUI[] = items.map((s: any) => ({
+        id: s._id,
+        name: s.name,
+        category: s.category,
+        price: s.price,
+        stock: s.quantity,
+        imageUrl: s.imageUrl || "/placeholder.svg",
+        bgColor: "#f7e1d3",
+      }))
+      setAllSweets(mapped)
+      setFilteredSweets(mapped)
+      setCurrentIndex(0)
+      if (typeof window !== "undefined") alert("Purchase successful!")
+    } catch (e: any) {
+      if (typeof window !== "undefined") alert(e?.message || "Purchase failed")
+    }
+  }
 
   return (
     <motion.div
@@ -563,7 +632,7 @@ export default function SweetShowcase() {
                       <span>Total:</span>
                       <span className="text-rose-600">${getTotalPrice().toFixed(2)}</span>
                     </div>
-                    <Button className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white py-3 text-lg font-semibold">
+                    <Button onClick={purchaseAll} className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white py-3 text-lg font-semibold">
                       Purchase Now
                     </Button>
                   </div>

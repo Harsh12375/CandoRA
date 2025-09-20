@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
+import { api } from "@/lib/api"
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("")
@@ -22,23 +23,22 @@ export default function AdminLogin() {
     setIsLoading(true)
     setError("")
 
-    // Simulate authentication
-    if (email === "harsh@gmail.com" && password === "123456789") {
-      // Create mock JWT token
-      const token = btoa(
-        JSON.stringify({
-          email,
-          role: "admin",
-          exp: Date.now() + 24 * 60 * 60 * 1000,
-        }),
-      )
-      localStorage.setItem("adminToken", token)
+    try {
+      const res = await api.auth.login({ email, password })
+      const role = (res.user as any)?.role
+      if (role !== "admin") {
+        setError("Admin access required")
+        return
+      }
+      localStorage.setItem("token", res.token)
+      localStorage.setItem("user", JSON.stringify(res.user))
       router.push("/admin/dashboard")
-    } else {
-      setError("Invalid credentials. Use harsh@gmail.com / 123456789")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Login failed"
+      setError(message)
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
