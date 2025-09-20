@@ -37,11 +37,18 @@ Place screenshots in `docs/screenshots/` and ensure they are committed. Example 
 
 - Admin Inventory
   
-  ![Admin Inventory](docs/screenshots/admin-inventory.png)
+<img width="1919" height="903" alt="image" src="https://github.com/user-attachments/assets/431d7e3c-d1f5-4152-a06a-d90da87437a1" />
+<img width="1917" height="907" alt="image" src="https://github.com/user-attachments/assets/122bf806-a71a-4850-a651-d4ac338061ca" />
+
+<img width="1917" height="914" alt="image" src="https://github.com/user-attachments/assets/9a73bb11-e605-4c93-ba8a-ac3b0293ed15" />
+<img width="1919" height="905" alt="image" src="https://github.com/user-attachments/assets/285937d0-651a-4cde-9308-89e07af56088" />
+
+
 
 - Admin Dashboard
-  
-  ![Admin Dashboard](docs/screenshots/admin-dashboard.png)
+  <img width="1919" height="911" alt="image" src="https://github.com/user-attachments/assets/8e5277c7-998c-4232-a853-4dcfcd9ac711" />
+<img width="1919" height="907" alt="image" src="https://github.com/user-attachments/assets/b73ffdff-2b05-44e5-afa0-8c65da345bd7" />
+
 
 ---
 
